@@ -6,7 +6,7 @@ class LoginPage {
 
     constructor(page){
         this.page   = page;
-        this.usernameInput  = '[name="signInEmail"]';
+        this.usernameInput  = '//label[@for="signInEmail"]';
         this.passwordInput  = '//input[@name="password"]';
         this.SignInBtn  ='//button[@class="button button__primary"]';
         this.Hmnm   = "//button[@id='account-nav-menu-icon']//span[contains(@class,'header__flex-container__icon__label')]";

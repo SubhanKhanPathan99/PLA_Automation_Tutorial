@@ -14,7 +14,8 @@ class HomePage {
         this.LoginPgBtn  = '#account-nav-menu-icon'
         this.SignInOpt  = '//a[@class="nav-list-option"]//span[normalize-space()="Sign In"]'
         this.SignInBtn  ='//button[@class="button button__primary"]'
-        this.ErrorMsg   = '#form-error-text'
+        this.ErrorMsg1   = '//app-error-messages[@class="dbi-body-3"]//div[@role="alert"]//div'
+        this.ErrorMsg2  =   '//app-input-protected-text[@label="Password"]//div[@role="alert"]//div'
     }
 
     async   gotoLoginPage(){
@@ -44,7 +45,9 @@ class HomePage {
 
         await this.page.locator(this.SignInBtn).click();
 
-        await expect(this.page.locator(this.ErrorMsg)).toHaveText('The email address is incorrect. Make sure the format is correct (abc@wxyz.com) and try again.')
+        await expect(this.page.locator(this.ErrorMsg1)).toHaveText('Please enter a valid email address.')
+
+        await   expect(this.page.locator(this.ErrorMsg2)).toHaveText('Please enter a password.')
 
 
     }
