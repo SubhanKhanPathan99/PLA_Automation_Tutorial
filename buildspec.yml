@@ -18,17 +18,13 @@ phases:
       - echo "Step 1: Running Playwright tests..."
       - |
         npm run test:chromium || echo "Playwright tests failed, continuing to report generation..."
-      - echo "Step 2: Generating CI-friendly Allure HTML report..."
-      - export TIMESTAMP=$(date +%Y%m%d%H%M%S)
-      - export ALLURE_OUTPUT="my-allure-results-$TIMESTAMP"
-      - mkdir -p $ALLURE_OUTPUT
-      - cp -r my-allure-results/* $ALLURE_OUTPUT/
-      - npx allure generate $ALLURE_OUTPUT --clean -o allure-report-$TIMESTAMP || echo "Allure report generation failed"
-      - echo "Allure report saved in allure-report-$TIMESTAMP"
+      - echo "Step 2: Generating Allure HTML report..."
+      - |
+        npx allure generate my-allure-results --clean -o allure-report || echo "Allure report generation failed"
 
 artifacts:
   files:
     - 'playwright-report/**'
-    - 'my-allure-results*/**'
-    - 'allure-report*/**'
+    - 'my-allure-results/**'
+    - 'allure-report/**'
   discard-paths: no
