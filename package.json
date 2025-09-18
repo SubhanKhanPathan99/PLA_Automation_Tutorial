@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test:report": "npx playwright test --reporter=line,html,allure-playwright"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

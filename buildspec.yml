@@ -2,19 +2,20 @@ version: 0.2
 
 phases:
   install:
-    runtime-versions:
-      nodejs: 20
     commands:
-      - echo "Installing Dependencies..."
+      - echo "Installing NPM dependencies..."
       - npm ci
-      - npx playwright install --with-deps
 
   build:
     commands:
-      - echo "Running Playwright tests..."
-      - npx playwright test
+      - echo "Running Playwright tests with Allure + HTML reports..."
+      - npm run test:report
+      - echo "Generating Allure HTML report..."
+      - npx allure generate allure-results --clean -o allure-report
 
 artifacts:
   files:
     - 'playwright-report/**'
+    - 'allure-results/**'
+    - 'allure-report/**'
   discard-paths: no
