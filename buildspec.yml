@@ -7,17 +7,21 @@ phases:
       - npm ci
       - echo "Installing Playwright browsers + Linux dependencies..."
       - npx playwright install --with-deps
+      - echo "Installing Java for Allure..."
+      - apt-get update && apt-get install -y openjdk-17-jdk
+      - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      - export PATH=$JAVA_HOME/bin:$PATH
+      - java -version
 
   build:
     commands:
       - echo "Running Playwright tests with Allure + HTML reports..."
-      - npm run test:chromium
-      - echo "Generating Allure HTML report..."
-      - npm run allure:report
+      - npm run test:report
 
 artifacts:
   files:
     - 'playwright-report/**'
-    - 'allure-results/**'
+    - 'my-allure-results/**'
     - 'allure-report/**'
   discard-paths: no
+
