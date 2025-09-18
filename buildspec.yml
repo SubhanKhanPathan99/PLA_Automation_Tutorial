@@ -5,6 +5,8 @@ phases:
     commands:
       - echo "Installing NPM dependencies..."
       - npm ci
+      - echo "Installing Playwright browsers + Linux dependencies..."
+      - npx playwright install --with-deps
 
   build:
     commands:
