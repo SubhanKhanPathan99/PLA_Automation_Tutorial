@@ -16,9 +16,9 @@ phases:
   build:
     commands:
       - echo "Step 1: Running Playwright tests..."
-      - npm run test:chromium || echo "Playwright tests failed, continuing to report generation..."
+      - "npm run test:chromium || echo 'Playwright tests failed, continuing to report generation...'"
       - echo "Step 2: Generating Allure HTML report..."
-      - npx allure generate my-allure-results --clean -o allure-report || echo "Allure report generation failed"
+      - "npx allure generate my-allure-results --clean -o allure-report || echo 'Allure report generation failed'"
 
 artifacts:
   files:
