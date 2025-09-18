@@ -41,7 +41,7 @@ export default defineConfig({
     screenshot:"only-on-failure",
     video:"on",
 
-    headless: isCI,          // 👈 Headless only in CI
+    headless: true,          // 👈 Headless only in CI
     slowMo: isCI ? 0 : 500,  // 👈 SlowMo only locally
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
