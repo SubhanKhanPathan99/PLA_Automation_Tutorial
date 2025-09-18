@@ -7,7 +7,7 @@ import  { LogoutPage }  from    '../pages/LogoutPage';
 const testdata  =   JSON.parse(JSON.stringify(require("../testdata.json")));
 
 
-test('test', async({page})=>{
+test('test @smoke' , async({page})=>{
 
 
     const hmp = new HomePage(page);
