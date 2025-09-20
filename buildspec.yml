@@ -5,6 +5,7 @@ env:
     S3_BUCKET: my-playwright-reports-123
     S3_PREFIX: playwright
     S3_WEBSITE_HOST: my-playwright-reports-123.s3-website-us-east-2.amazonaws.com
+    
 
 phases:
   install:
@@ -27,19 +28,27 @@ phases:
 
   post_build:
     commands:
-      - 'aws --version || (echo FATAL: AWS CLI not found; exit 1)'
+      - 'echo === AWS identity & bucket check ==='
+      - 'aws --version'
+      - 'aws sts get-caller-identity'                                    # which role is running
+      - 'aws s3api head-bucket --bucket "$S3_BUCKET" || (echo "Bucket not reachable"; exit 1)'
       - 'export BUILD_TS=$(date -u +"%Y%m%d-%H%M%S"); export SRC_VER="${CODEBUILD_SOURCE_VERSION:-no-vcs}"; export RUN_PREFIX="$S3_PREFIX/$SRC_VER/$CODEBUILD_BUILD_NUMBER-$BUILD_TS"; echo RUN_PREFIX="$RUN_PREFIX"'
-      - 'echo Uploading Playwright HTML - run and latest'
+      - 'echo === Upload Playwright report ==='
       - '[ -d "playwright-report" ] && aws s3 sync playwright-report "s3://$S3_BUCKET/$RUN_PREFIX/playwright/" --delete || echo "playwright-report/ not found"'
       - '[ -d "playwright-report" ] && aws s3 sync playwright-report "s3://$S3_BUCKET/$S3_PREFIX/latest/playwright/" --delete || true'
-      - 'echo Uploading Allure HTML - run and latest'
+      - 'echo === Upload Allure report ==='
       - '[ -d "allure-report" ] && aws s3 sync allure-report "s3://$S3_BUCKET/$RUN_PREFIX/allure/" --delete || echo "allure-report/ not found"'
       - '[ -d "allure-report" ] && aws s3 sync allure-report "s3://$S3_BUCKET/$S3_PREFIX/latest/allure/" --delete || true'
+      - 'echo === List what is now in S3 (latest & run) ==='
+      - 'aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/latest/playwright/" --recursive || true'
+      - 'aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/latest/allure/" --recursive || true'
+      - 'aws s3 ls "s3://$S3_BUCKET/$RUN_PREFIX/" --recursive || true'
       - 'echo --------- Report URLs ---------'
       - 'echo Playwright latest: http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/playwright/index.html'
       - 'echo Playwright run:    http://$S3_WEBSITE_HOST/$RUN_PREFIX/playwright/index.html'
       - 'echo Allure latest:     http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/allure/index.html'
       - 'echo Allure run:        http://$S3_WEBSITE_HOST/$RUN_PREFIX/allure/index.html'
+
 
 artifacts:
   files:
