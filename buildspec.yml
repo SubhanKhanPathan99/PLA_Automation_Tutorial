@@ -14,6 +14,8 @@ phases:
       - npm run test:chromium || echo "Playwright tests failed, continuing..."
 
 artifacts:
-  files:
-    - '**/*'
+  ffiles:
+    - results/**/*.html
   discard-paths: no
+  base-directory: results
+
