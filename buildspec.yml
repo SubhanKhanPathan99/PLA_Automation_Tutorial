@@ -9,37 +9,37 @@ env:
 phases:
   install:
     commands:
-      - 'echo Installing Java + unzip'
+      - 'echo Installing Java and unzip'
       - 'if command -v yum >/dev/null 2>&1; then yum install -y java-17-amazon-corretto-headless unzip; elif command -v apt-get >/dev/null 2>&1; then apt-get update -y && apt-get install -y openjdk-17-jre-headless unzip; else echo No supported package manager found; fi'
       - 'echo Ensuring AWS CLI is installed'
       - 'if ! command -v aws >/dev/null 2>&1; then curl -sSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip && unzip -q awscliv2.zip && ./aws/install && aws --version; else aws --version; fi'
       - 'echo Installing NPM dependencies'
       - 'npm ci'
-      - 'echo Installing Playwright browsers + Linux deps'
+      - 'echo Installing Playwright browsers and Linux deps'
       - 'npx playwright install --with-deps'
 
   build:
     commands:
-      - 'echo Running Playwright tests (line, html, allure-playwright)'
+      - 'echo Running Playwright tests - reporters: line, html, allure-playwright'
       - 'npm run test:chromium || true'
-      - 'echo Generating Allure HTML from my-allure-results -> allure-report'
+      - 'echo Generating Allure HTML from my-allure-results to allure-report'
       - 'if [ -d "my-allure-results" ]; then npx allure generate my-allure-results --clean -o allure-report; else echo No Allure results found; fi'
 
   post_build:
     commands:
       - 'aws --version || (echo FATAL: AWS CLI not found; exit 1)'
       - 'export BUILD_TS=$(date -u +"%Y%m%d-%H%M%S"); export SRC_VER="${CODEBUILD_SOURCE_VERSION:-no-vcs}"; export RUN_PREFIX="$S3_PREFIX/$SRC_VER/$CODEBUILD_BUILD_NUMBER-$BUILD_TS"; echo RUN_PREFIX="$RUN_PREFIX"'
-      - 'echo Uploading Playwright HTML (run + latest)'
+      - 'echo Uploading Playwright HTML - run and latest'
       - '[ -d "playwright-report" ] && aws s3 sync playwright-report "s3://$S3_BUCKET/$RUN_PREFIX/playwright/" --delete || echo "playwright-report/ not found"'
       - '[ -d "playwright-report" ] && aws s3 sync playwright-report "s3://$S3_BUCKET/$S3_PREFIX/latest/playwright/" --delete || true'
-      - 'echo Uploading Allure HTML (run + latest)'
+      - 'echo Uploading Allure HTML - run and latest'
       - '[ -d "allure-report" ] && aws s3 sync allure-report "s3://$S3_BUCKET/$RUN_PREFIX/allure/" --delete || echo "allure-report/ not found"'
       - '[ -d "allure-report" ] && aws s3 sync allure-report "s3://$S3_BUCKET/$S3_PREFIX/latest/allure/" --delete || true'
       - 'echo --------- Report URLs ---------'
-      - 'echo Playwright (latest): http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/playwright/index.html'
-      - 'echo Playwright (run):    http://$S3_WEBSITE_HOST/$RUN_PREFIX/playwright/index.html'
-      - 'echo Allure (latest):     http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/allure/index.html'
-      - 'echo Allure (run):        http://$S3_WEBSITE_HOST/$RUN_PREFIX/allure/index.html'
+      - 'echo Playwright latest: http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/playwright/index.html'
+      - 'echo Playwright run:    http://$S3_WEBSITE_HOST/$RUN_PREFIX/playwright/index.html'
+      - 'echo Allure latest:     http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/allure/index.html'
+      - 'echo Allure run:        http://$S3_WEBSITE_HOST/$RUN_PREFIX/allure/index.html'
 
 artifacts:
   files:
