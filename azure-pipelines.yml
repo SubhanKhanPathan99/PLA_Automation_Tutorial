@@ -1,12 +1,10 @@
-# Run Playwright tests on each push to main
 trigger:
-  - main
+  - main   # change to your branch if not 'main'
 
 pool:
   vmImage: ubuntu-latest
 
 variables:
-  # change if your tests live elsewhere
   TEST_PROJECT: chromium
   ALLURE_RESULTS_DIR: my-allure-results
 
@@ -20,48 +18,30 @@ steps:
     displayName: 'Use Node.js 20'
 
   - script: |
-      echo "Install Java (for Allure CLI) and unzip"
       sudo apt-get update -y
       sudo apt-get install -y openjdk-17-jre-headless unzip
-    displayName: 'Install Java'
+    displayName: 'Install Java (for Allure)'
 
   - script: |
-      echo "Install dependencies"
       npm ci
-      echo "Install Playwright browsers + Linux deps"
       npx playwright install --with-deps
-    displayName: 'Install NPM deps & browsers'
+    displayName: 'Install deps & browsers'
 
-  # === Run tests ===
-  # We force Allure to write to my-allure-results (works even if your npm script uses CLI reporters)
   - script: |
-      echo "Run Playwright tests"
+      echo "Run Playwright"
       ALLURE_RESULTS_DIR=$(ALLURE_RESULTS_DIR) npx playwright test --project=$(TEST_PROJECT) --reporter=line,html,allure-playwright || true
-    displayName: 'Run Playwright (do not fail build on test failures)'
+    displayName: 'Run Playwright tests'
 
-  # === Generate Allure HTML (from my-allure-results or fallback allure-results) ===
   - script: |
-      echo "Generate Allure HTML"
       RESULTS_DIR="$(ALLURE_RESULTS_DIR)"
       if [ ! -d "$RESULTS_DIR" ] && [ -d "allure-results" ]; then RESULTS_DIR="allure-results"; fi
       if [ -d "$RESULTS_DIR" ]; then
         npx allure generate "$RESULTS_DIR" --clean -o allure-report
       else
-        echo "No Allure results folder found; creating placeholder"
         mkdir -p allure-report && printf "<h2>No Allure report</h2>" > allure-report/index.html
       fi
-    displayName: 'Generate Allure report'
+    displayName: 'Generate Allure HTML'
 
-  # (Optional) Publish JUnit to Tests tab — enable if you also output JUnit
-  # Add reporter 'junit' to your run to create 'junit.xml', then uncomment below.
-  # - task: PublishTestResults@2
-  #   inputs:
-  #     testResultsFormat: 'JUnit'
-  #     testResultsFiles: 'junit.xml'
-  #     failTaskOnFailedTests: false
-  #   displayName: 'Publish JUnit results (optional)'
-
-  # === Publish HTML reports as pipeline artifacts ===
   - task: PublishPipelineArtifact@1
     inputs:
       targetPath: 'playwright-report'
