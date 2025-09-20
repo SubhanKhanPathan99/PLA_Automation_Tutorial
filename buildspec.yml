@@ -11,13 +11,26 @@ env:
 phases:
   install:
     commands:
-      - echo "Installing Java for Allure (Amazon Linux 2)..."
+      - echo "Installing Java for Allure (Amazon Linux/Ubuntu) ..."
       - |
         if command -v yum >/dev/null 2>&1; then
-          yum install -y java-17-amazon-corretto-headless
+          yum install -y java-17-amazon-corretto-headless unzip
         elif command -v apt-get >/dev/null 2>&1; then
-          apt-get update -y && apt-get install -y openjdk-17-jre-headless
+          apt-get update -y && apt-get install -y openjdk-17-jre-headless unzip
         fi
+
+      - echo "Ensuring AWS CLI is installed ..."
+      - |
+        if ! command -v aws >/dev/null 2>&1; then
+          echo "AWS CLI not found; installing AWS CLI v2 ..."
+          curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          ./aws/install
+          aws --version
+        else
+          echo "AWS CLI present: $(aws --version)"
+        fi
+
       - echo "Installing NPM dependencies..."
       - npm ci
       - echo "Installing Playwright browsers + Linux deps..."
@@ -32,16 +45,22 @@ phases:
 
   post_build:
     commands:
+      - echo "Verifying AWS CLI before upload ..."
+      - aws --version || (echo "FATAL: AWS CLI still not found"; exit 1)
+
       - echo "Preparing S3 upload paths..."
       - export BUILD_TS=$(date -u +"%Y%m%d-%H%M%S")
       - export SRC_VER="${CODEBUILD_SOURCE_VERSION:-no-vcs}"
       - export RUN_PREFIX="$S3_PREFIX/$SRC_VER/$CODEBUILD_BUILD_NUMBER-$BUILD_TS"
+
       - echo "Uploading Playwright HTML..."
       - if [ -d "playwright-report" ]; then aws s3 sync playwright-report "s3://$S3_BUCKET/$RUN_PREFIX/playwright/" --delete; fi
       - if [ -d "playwright-report" ]; then aws s3 sync playwright-report "s3://$S3_BUCKET/$S3_PREFIX/latest/playwright/" --delete; fi
+
       - echo "Uploading Allure HTML..."
       - if [ -d "allure-report" ]; then aws s3 sync allure-report "s3://$S3_BUCKET/$RUN_PREFIX/allure/" --delete; fi
       - if [ -d "allure-report" ]; then aws s3 sync allure-report "s3://$S3_BUCKET/$S3_PREFIX/latest/allure/" --delete; fi
+
       - echo "--------- Report URLs ---------"
       - |
         if [ -n "$S3_WEBSITE_HOST" ]; then
