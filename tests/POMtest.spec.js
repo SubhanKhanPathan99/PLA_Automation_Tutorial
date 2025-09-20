@@ -32,10 +32,3 @@ test('test @smoke' , async({page})=>{
 
 })
 
-
-
-// Timeouts:
-// 1. Test timeout
-// 2. Assertion timeout
-// 3. Action timeout
-// 4. All time execution timeout
