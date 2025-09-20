@@ -1,21 +1,65 @@
 version: 0.2
 
+env:
+  variables:
+    S3_BUCKET: my-playwright-reports-123         # <-- change
+    S3_PREFIX: "playwright"                    # will create /playwright/latest and /playwright/<run>/
+    # If you enable S3 static website hosting, paste the website endpoint (no https://), e.g.:
+    # S3_WEBSITE_HOST: your-report-bucket-name.s3-website-us-east-1.amazonaws.com
+    S3_WEBSITE_HOST: "http://my-playwright-reports-123.s3-website.us-east-2.amazonaws.com"
+
 phases:
   install:
     commands:
+      - echo "Installing Java for Allure (Amazon Linux 2)..."
+      - |
+        if command -v yum >/dev/null 2>&1; then
+          yum install -y java-17-amazon-corretto-headless
+        elif command -v apt-get >/dev/null 2>&1; then
+          apt-get update -y && apt-get install -y openjdk-17-jre-headless
+        fi
       - echo "Installing NPM dependencies..."
       - npm ci
-      - echo "Installing Playwright browsers + Linux dependencies..."
+      - echo "Installing Playwright browsers + Linux deps..."
       - npx playwright install --with-deps
 
   build:
     commands:
-      - echo "Running Playwright tests..."
-      - npm run test:chromium || echo "Playwright tests failed, continuing..."
+      - echo "Running Playwright tests (line, html, allure-playwright)..."
+      - npm run test:chromium || true
+      - echo "Generating Allure HTML from my-allure-results -> allure-report..."
+      - npx allure generate my-allure-results --clean -o allure-report || echo "Allure report generation skipped (no results?)"
+
+  post_build:
+    commands:
+      - echo "Preparing S3 upload paths..."
+      - export BUILD_TS=$(date -u +"%Y%m%d-%H%M%S")
+      - export SRC_VER="${CODEBUILD_SOURCE_VERSION:-no-vcs}"
+      - export RUN_PREFIX="$S3_PREFIX/$SRC_VER/$CODEBUILD_BUILD_NUMBER-$BUILD_TS"
+      - echo "Uploading Playwright HTML..."
+      - if [ -d "playwright-report" ]; then aws s3 sync playwright-report "s3://$S3_BUCKET/$RUN_PREFIX/playwright/" --delete; fi
+      - if [ -d "playwright-report" ]; then aws s3 sync playwright-report "s3://$S3_BUCKET/$S3_PREFIX/latest/playwright/" --delete; fi
+      - echo "Uploading Allure HTML..."
+      - if [ -d "allure-report" ]; then aws s3 sync allure-report "s3://$S3_BUCKET/$RUN_PREFIX/allure/" --delete; fi
+      - if [ -d "allure-report" ]; then aws s3 sync allure-report "s3://$S3_BUCKET/$S3_PREFIX/latest/allure/" --delete; fi
+      - echo "--------- Report URLs ---------"
+      - |
+        if [ -n "$S3_WEBSITE_HOST" ]; then
+          echo "Playwright (latest): http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/playwright/index.html"
+          echo "Playwright (run):    http://$S3_WEBSITE_HOST/$RUN_PREFIX/playwright/index.html"
+          echo "Allure (latest):     http://$S3_WEBSITE_HOST/$S3_PREFIX/latest/allure/index.html"
+          echo "Allure (run):        http://$S3_WEBSITE_HOST/$RUN_PREFIX/allure/index.html"
+        else
+          echo "S3 object paths (enable S3 Website Hosting or CloudFront for clickable links):"
+          echo "  s3://$S3_BUCKET/$S3_PREFIX/latest/playwright/index.html"
+          echo "  s3://$S3_BUCKET/$RUN_PREFIX/playwright/index.html"
+          echo "  s3://$S3_BUCKET/$S3_PREFIX/latest/allure/index.html"
+          echo "  s3://$S3_BUCKET/$RUN_PREFIX/allure/index.html"
+        fi
 
 artifacts:
-  ffiles:
-    - results/**/*.html
+  files:
+    - playwright-report/**/*
+    - allure-report/**/*
   discard-paths: no
-  base-directory: results
-
+  base-directory: .
