@@ -9,29 +9,54 @@ variables:
   ALLURE_RESULTS_DIR: my-allure-results
 
 steps:
+  # Repo
   - checkout: self
     fetchDepth: 1
 
+  # Node
   - task: NodeTool@0
     inputs:
       versionSpec: '20.x'
     displayName: 'Use Node.js 20'
 
+  # Java for Allure generate
   - script: |
       sudo apt-get update -y
       sudo apt-get install -y openjdk-17-jre-headless unzip
     displayName: 'Install Java (for Allure)'
 
+  # Deps & browsers
   - script: |
       npm ci
       npx playwright install --with-deps
     displayName: 'Install deps & browsers'
 
-  - script: |
-      echo "Run Playwright"
-      ALLURE_RESULTS_DIR=$(ALLURE_RESULTS_DIR) npx playwright test --project=$(TEST_PROJECT) --reporter=line,html,allure-playwright || true
-    displayName: 'Run Playwright tests'
+  # Coverage tool
+  - script: npm i -D nyc
+    displayName: 'Install nyc (coverage)'
 
+  # ---- Run tests with coverage + reporters (HTML, Allure, JUnit) ----
+  - script: |
+      mkdir -p test-results
+      echo "Run Playwright with coverage"
+      PLAYWRIGHT_JUNIT_OUTPUT_FILE=test-results/junit.xml \
+      ALLURE_RESULTS_DIR=$(ALLURE_RESULTS_DIR) \
+      npx nyc --reporter=cobertura --reporter=lcov --reporter=html \
+        npx playwright test --project=$(TEST_PROJECT) --reporter=line,html,allure-playwright,junit || true
+    displayName: 'Run Playwright tests (with coverage)'
+
+  # Publish to Tests tab
+  - task: PublishTestResults@2
+    displayName: 'Publish JUnit results to Tests tab'
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: 'test-results/junit.xml'
+      testRunTitle: 'Playwright'
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+
+  # Generate Allure static HTML
   - script: |
       RESULTS_DIR="$(ALLURE_RESULTS_DIR)"
       if [ ! -d "$RESULTS_DIR" ] && [ -d "allure-results" ]; then RESULTS_DIR="allure-results"; fi
@@ -42,16 +67,28 @@ steps:
       fi
     displayName: 'Generate Allure HTML'
 
+  # Publish Playwright HTML report (artifact)
   - task: PublishPipelineArtifact@1
+    displayName: 'Publish Playwright HTML'
+    condition: always()
     inputs:
       targetPath: 'playwright-report'
       artifact: 'playwright-report'
-    condition: always()
-    displayName: 'Publish Playwright HTML'
 
+  # Publish Allure HTML report (artifact)
   - task: PublishPipelineArtifact@1
+    displayName: 'Publish Allure HTML'
+    condition: always()
     inputs:
       targetPath: 'allure-report'
       artifact: 'allure-report'
+
+  # Publish coverage to Code Coverage tab
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish coverage to Code Coverage tab'
     condition: always()
-    displayName: 'Publish Allure HTML'
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: 'coverage/cobertura-coverage.xml'
+      reportDirectory: 'coverage'      # must contain index.html
+      failIfCoverageEmpty: false
