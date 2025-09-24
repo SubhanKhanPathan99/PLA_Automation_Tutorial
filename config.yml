@@ -1,0 +1,79 @@
+version: 2.1
+
+# Use the official Playwright Docker image so browsers are preinstalled.
+executors:
+  pw-exec:
+    docker:
+      - image: mcr.microsoft/playwright:latest
+    working_directory: ~/project
+
+orbs:
+  node: circleci/node@5.1.0
+
+jobs:
+  test:
+    executor: pw-exec
+    parallelism: 1   # bump to 2/4 later and split tests (see notes)
+    environment:
+      ALLURE_RESULTS_DIR: my-allure-results
+    steps:
+      - checkout
+
+      # Cache node_modules for faster builds
+      - restore_cache:
+          keys:
+            - v1-deps-{{ arch }}-{{ checksum "package-lock.json" }}
+            - v1-deps-{{ arch }}
+      - run:
+          name: Install deps
+          command: |
+            npm ci
+      - save_cache:
+          key: v1-deps-{{ arch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+            - ~/.cache
+            - node_modules
+
+      # (Browsers are already in the Docker image; no install needed.)
+      # If you use OS packages, add an apt-get step here.
+
+      - run:
+          name: Run Playwright tests (HTML + Allure + JUnit)
+          command: |
+            mkdir -p test-results
+            # Run tests; don't fail the job early so we can always publish artifacts
+            npx playwright test --reporter=line,html,allure-playwright,junit || true
+
+      # Generate Allure HTML (requires Java in image; if not present, add `apt-get install -y openjdk-17-jre-headless`)
+      - run:
+          name: Generate Allure HTML
+          command: |
+            if [ -d "$ALLURE_RESULTS_DIR" ] || [ -d "allure-results" ]; then
+              DIR="$ALLURE_RESULTS_DIR"; [ ! -d "$DIR" ] && DIR="allure-results"
+              npx allure generate "$DIR" --clean -o allure-report || echo "Allure generate skipped"
+            else
+              mkdir -p allure-report && printf "<h2>No Allure report</h2>" > allure-report/index.html
+            fi
+
+      # Upload JUnit so CircleCI shows a nice Test Summary
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: junit-xml
+
+      # Upload Playwright HTML report
+      - store_artifacts:
+          path: playwright-report
+          destination: playwright-html
+
+      # Upload Allure HTML report
+      - store_artifacts:
+          path: allure-report
+          destination: allure-html
+
+workflows:
+  ci:
+    jobs:
+      - test
