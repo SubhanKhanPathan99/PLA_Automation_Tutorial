@@ -3,6 +3,7 @@
 End-to-end UI test automation with **Playwright** using a simple **Page Object Model (POM)**, wired to **Azure DevOps Pipelines** and **AWS CodeBuild**. 
 - Azure pipeline publishes **Playwright HTML** and **Allure** reports as artifacts, **JUnit** to the **Tests** tab, and optional **code coverage** to the **Code Coverage** tab.
 - AWS CodeBuild job can **generate the same reports** and deploy them to an **S3 static website** (optional).
+- CircleCI pipeline publishes JUnit to the Tests summary and Playwright/Allure HTML as artifacts.
 
 ## Tech stack
 - Node.js 20
@@ -21,6 +22,7 @@ End-to-end UI test automation with **Playwright** using a simple **Page Object M
 ├─ tests/                     # Playwright test specs
 ├─ tests-examples/            # Example/spec templates
 ├─ .github/workflows/         # (Optional) GitHub Actions workflows
+├─ .circleci/config.yml       # CircleCI pipeline
 ├─ azure-pipelines.yml        # Azure DevOps CI pipeline
 ├─ buildspec.yml              # AWS CodeBuild config
 ├─ playwright.config.js       # Playwright configuration
@@ -97,6 +99,18 @@ Where to view in a run:
 > If **Code Coverage** says “HTML not found”, ensure `reportDirectory: coverage` exists and contains `index.html`.
 
 ---
+
+**CircleCI (summary)**
+
+This project also runs on CircleCI using a Docker executor with the Playwright image. The job uploads:
+
+JUnit → CircleCI Tests tab
+
+Playwright HTML → Artifacts (playwright-report/index.html)
+
+Allure HTML → Artifacts (allure-report/index.html)
+
+Version sync: Keep your Playwright npm version aligned with the Docker image tag (e.g., @playwright/test 1.55.x ⇄ mcr.microsoft.com/playwright:v1.55.0-jammy). Mismatches cause “Executable doesn’t exist” errors.
 
 ## AWS CodeBuild + S3 (optional deployment)
 
@@ -244,6 +258,7 @@ Page Objects live under `pages/`. Example: `SelectPage.js` encapsulates locators
 - **Coverage tab empty (Azure)**: Ensure `coverage/cobertura-coverage.xml` and `coverage/index.html` exist; update pipeline paths accordingly.
 - **S3 site 403/AccessDenied**: Public access likely blocked; either add a bucket policy, use CloudFront, or deploy privately and share pre-signed URLs.
 - **Allure report empty**: Verify `ALLURE_RESULTS_DIR` or fallback `allure-results` directory actually exists before generating.
+- **CircleCI “Executable doesn’t exist … update docker image”:** Align npm @playwright/test version with the Docker image tag.
 
 ---
 
