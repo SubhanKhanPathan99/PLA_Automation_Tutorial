@@ -3,7 +3,7 @@ version: 2.1
 executors:
   pw-exec:
     docker:
-      - image: mcr.microsoft.com/playwright:v1.47.0-jammy
+      - image: mcr.microsoft.com/playwright:v1.55.0-jammy 
     working_directory: ~/project
 
 jobs:
