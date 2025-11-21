@@ -11,7 +11,7 @@ End-to-end UI test automation with **Playwright** using a simple **Page Object M
 - Page Object Model (e.g., `pages/SelectPage.js`)
 - Allure (pretty HTML report)
 - CI: Azure DevOps (`azure-pipelines.yml`), AWS CodeBuild (`buildspec.yml`)
-- (Optional) nyc/istanbul for coverage
+- (Optional) nyc/istanbul for coverage.
 
 ---
 
